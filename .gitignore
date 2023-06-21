@@ -1,0 +1,7 @@
+*.onnx
+*.jpg
+*.png
+*.mp4
+*.whl
+nano_build_opencv
+jetson-gpio

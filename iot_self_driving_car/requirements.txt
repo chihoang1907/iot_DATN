@@ -1,0 +1,20 @@
+# virtualenv --python=python3 .venv --system-site-packages
+flask-socketio==4.3.2
+testresources
+numpy==1.16.1
+future==0.18.2
+mock==3.0.5
+# sudo apt install pkg-config libhdf5-dev
+h5py==3.1.0
+keras_preprocessing==1.1.1
+keras_applications==1.0.8
+futures==2.2.0
+protobuf==3.19.6
+pybind11
+# wget https://developer.download.nvidia.com/compute/redist/jp/v461/tensorflow/tensorflow-2.7.0+nv22.1-cp36-cp36m-linux_aarch64.whl
+tensorflow-2.7.0+nv22.1-cp36-cp36m-linux_aarch64.whl
+regex==2023.6.3
+adafruit-circuitpython-busdevice==5.1.5
+adafruit-circuitpython-motor==3.3.5
+adafruit-circuitpython-servokit==1.3.9
+pycuda==2020.1

@@ -1,0 +1,6 @@
+source .venv/bin/activate
+sudo apt install python3-pip
+sudo pip3 install virtualenv
+sudo apt install python3-venv python3-pip
+
+sudo apt-get remove --purge chromium-browser
