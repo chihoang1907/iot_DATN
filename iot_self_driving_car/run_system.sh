@@ -10,8 +10,8 @@ sudo busybox devmem 0x6000d100 32 0x00
 echo 2 > /sys/class/pwm/pwmchip0/export
 echo 1 > /sys/class/pwm/pwmchip0/pwm2/enable
 
-cd /home/jetson/Documents/iot_self_driving_car/
+cd /home/jetson/Documents/iot_DATN/iot_self_driving_car/
 source .venv/bin/activate
 export LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libgomp.so.1
-export OPENBLAS_CORETYPE=ARMV8
-# python web_server.py
+# export OPENBLAS_CORETYPE=ARMV8
+python web_server.py

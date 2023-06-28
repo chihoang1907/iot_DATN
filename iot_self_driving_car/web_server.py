@@ -16,15 +16,16 @@ IN_MOTOR_DRIVER = {
 }
 SERVO_PIN_PCA = 0
 
-camera = Camera.get_instance()
-print("Camera is opened: "+ str(camera.is_opened()))
-if not camera.is_opened():
-    raise Exception("Camera is not opened!")
+
+
 app = Flask(__name__, template_folder='templates')
 app.config["SECRET_KEY"] = 'secret!'
 socketio = SocketIO(app)
 car = Car(IN_MOTOR_DRIVER, SERVO_PIN_PCA)
-
+camera = Camera(car)
+print("Camera is opened: "+ str(camera.is_opened()))
+if not camera.is_opened():
+    raise Exception("Camera is not opened!")
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -49,19 +50,25 @@ def message(data):
         car.backward(speed)
     elif data == 'left':
         car.turn_left(3)
+        emit('message', car.deg, namespace='/socket')
     elif data == 'right':
         car.turn_right(3)
+        emit('message', car.deg, namespace='/socket')
     elif data == 'stop':
         car.stop()
+    elif re.match(r'corner \d+', data):
+        deg = int(data.split(' ')[1])
+        car.turn_corner(deg)
+        emit('message', car.deg, namespace='/socket')
     
     
 
 def main():
-    capture_thread = threading.Thread(target=camera.update)
-    capture_thread.daemon = True
-    capture_thread.start()
-
-    socketio.run(app, host=HOST, port=PORT)
+    thread_web = threading.Thread(target=socketio.run, args=(app, HOST, PORT))
+    thread_web.daemon = True
+    thread_web.start()
+    while camera.is_opened():
+        camera.update()
 
 if __name__ == '__main__':
     main()

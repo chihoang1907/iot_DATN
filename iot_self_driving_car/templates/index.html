@@ -13,7 +13,11 @@
 		});
 		// Listen for messages
 		socket.on('message', function(data) {
-			console.log(data);
+			console.log('Incoming message:', data);
+			// corner
+			corner = document.getElementById("corner");
+			corner.value = data;
+			document.getElementById("corner_value").innerHTML = data;
 		});
 		socket.emit('message', 'Hello World');
 		// keypress event
@@ -52,6 +56,11 @@
 			save.download = "capture.jpg";
 			save.click();
 		}
+		onchangeCorner = function(){
+			var corner = document.getElementById("corner").value;
+			socket.emit('message', 'corner '+corner);
+		}
+
 		
     </script>
 	
@@ -68,6 +77,8 @@
 
     <p> Speed <input id="speed" type="range" min="11" max="80", style="width:300px"; value="11" onchange="document.getElementById('speed_value').innerHTML = this.value;">
 	<span id="speed_value">11</span> </p>
+	<p> corner <input id="corner" type="range" min="65" max="135", style="width:300px"; value="95" onchange=onchangeCorner()>
+		<span id="corner_value">95</span> </p>
 	<button type="button" onclick="capture()">Capture</button>
 </div>
 </body>

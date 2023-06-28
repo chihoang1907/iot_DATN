@@ -7,7 +7,7 @@ MIN_SERVO = 65
 MAX_SERVO = 135
 TIME_SLEEP_SERVO = 0.05
 
-MIN_DUTY_DC_RUN = 32
+MIN_DUTY_DC_RUN = 60
 TIME_SLEEP_DC_RUN = 0.1
 
 class Car:
@@ -21,7 +21,6 @@ class Car:
         self.servo_pin_pca = servo_pin_pca
         self.deg = CENTER_SERVO
         self.servo= None
-        print
         self.setup_pin()
     
     def __del__(self):
@@ -78,4 +77,12 @@ class Car:
         self.deg = min(self.deg + deg_turn, MAX_SERVO)
         self.servo.angle = self.deg
         # time.sleep(TIME_SLEEP_SERVO)
-        
+
+    def turn_corner(self, deg):
+        # clip value
+        deg = max(min(deg, MAX_SERVO), MIN_SERVO)
+        self.deg = deg
+        self.servo.angle = self.deg
+
+    def is_stop(self):
+        return self.speed == 0

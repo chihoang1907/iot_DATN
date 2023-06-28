@@ -3,5 +3,7 @@
 *.png
 *.mp4
 *.whl
+*.pth
+*.pb
 nano_build_opencv
 jetson-gpio
