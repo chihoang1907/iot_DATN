@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Pi Car Controller </title>
+	<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+		integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+	<div class="container">
+		<div class="left"></div>
+		<div class="main">
+			<div class="title">
+				<h1>Car Web Control</h1>
+			</div>
+			<div>
+				<h2 style="display: flex; flex-direction: row;">Status: <p  id="status_car"></p></h2>
+			</div>
+			<div class="img">
+				<img id="frame" src="/stream_camera" width="100%" height="100%" />
+			</div>
+			<div class="container-btn">
+				<div class="btn-process">
+					<div class="speed-corner">
+						<span>Speed</span>
+						<input id="speed" type="range" min="11" max="80" ; value="11"
+							onchange=onchangeSpeed()>
+						<span id="speed_value">11</span>
+					</div>
+					<div class="speed-corner">
+						<span>Corner</span>
+						<input id="corner" type="range" min="65" max="135" ; value="95" oninput=onchangeCorner()>
+						<span id="corner_value">95</span>
+					</div>
+				</div>
+				<div class="form-check form-switch">
+					<input class="form-check-input" type="checkbox" id="status_control"
+						onclick=onchangeStatusControl()>
+					<span id="status_control_value" style="margin-left: 20;">Turn Off</span>
+				</div>
+			</div>
+			<div class="btn-capture">
+				<button type="button" class="btn btn-outline-primary btn-lg" onclick="capture()">Capture</button>
+			</div>
+
+		</div>
+		<div class="right"></div>
+	</div>
+
+	<script src="{{url_for('static', filename='scripts.js')}}"></script>
+</body>
+
+</html>
