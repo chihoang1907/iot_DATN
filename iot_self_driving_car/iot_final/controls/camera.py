@@ -93,6 +93,7 @@ class Camera(object):
             self.width_lane = cfg.WIDTH_LANE
             self.center_servo = cfg.CENTER_SERVO
             self.min_duty_dc_run =cfg.MIN_DUTY_DC_RUN
+            self.duty_dc_run = cfg.DUTY_DC_RUN
 
             self.model_LD = LaneDetection(cfg.MODEL_LD_PATH, self.ori_height, self.ori_width, cfg.INPUT_HEIGHT_LD, cfg.INPUT_WIDTH_LD, cfg.CROP_RAITO, cfg.CLS_NUM_PER_LANE, 
                                           cfg.GRIDING_NUM, cfg.NUM_LANE, self.stream)
@@ -110,8 +111,12 @@ class Camera(object):
             self.arr_x_oriline_right = np.array(self.arr_x_oriline_right)
             self.arr_x_oriline_left = np.array(self.arr_x_oriline_left)
 
-            self.time_turn_limmit = 3
+            self.time_stop_limmit = 2
+            self.time_backward_limmit = 1 
+            self.time_turn_limmit = 2.5
             self.start_turn = None
+            self.start_stop = None
+            self.start_backward = None
             self.object_before = None
     def draw_line_limmit(self, frame_recognized):
         dis_step = 10 #cm
@@ -179,17 +184,33 @@ class Camera(object):
         return self.frame_recognized
     
     def control_car(self):
-        try:
-            self.control_car_meet_object()
+        if self.control_car_meet_object():
             self.control_car_in_lane()
-        except:
-            pass
-    
+        now = time.time()
+        if self.start_stop and now - self.start_stop >= self.time_stop_limmit:
+            if self.start_turn:
+                self.start_turn = time.time()
+            if self.car.speed <= 0:
+                self.car.turn_corner(self.center_servo)
+                self.car.backward(self.min_duty_dc_run+3)
+                if not self.start_backward:
+                    self.start_backward = now
+                elif now - self.start_backward >= self.time_backward_limmit:
+                    self.car.stop()
+                    self.start_stop = now
+            else:
+                self.start_stop = None
+
+    def stop_car(self):
+        self.car.stop()
+        if not self.start_stop:
+            self.start_stop = time.time()
+
     def control_car_meet_object(self):
         if len(self.objects) > 0:
             dis_obj_limit = 3
-            thre_width = 0.65
-            speed = None
+            dis_obj_stop_limit = 2
+            thre_width = 0.7
             # get object in range from 0cm to 30cm
             objects = self.objects[self.objects[:, 3] >= self.array_distance[dis_obj_limit]]
             
@@ -198,57 +219,66 @@ class Camera(object):
                 mask_left = np.logical_and(objects[:,0] >= self.arr_x_oriline_left[dis_obj_limit], objects[:,0] <= self.arr_x_oriline_right[dis_obj_limit])
                 mask_right = np.logical_and(objects[:,2] >= self.arr_x_oriline_left[dis_obj_limit], objects[:,2] <= self.arr_x_oriline_right[dis_obj_limit])
                 object_min = None
+                index_dis_obj = None
                 objects = objects[np.logical_or(mask_left, mask_right)]
                 if len(objects) > 0:
                     # get object min distance
                     object_min = objects[np.argmax(objects[:, 3])]
                     # stop 20cm
-                    if object_min[3] >= self.array_distance[1]:
-                        self.car.stop()
-                        raise Exception("return")
+                    if object_min[3] >= self.array_distance[dis_obj_stop_limit]:
+                        print("stop")
+                        self.stop_car()
+                        return False
                 if self.traffic_light_color:
                     if self.traffic_light_color == "stop":
+                        print("tf stop")
                         self.car.stop()
-                        raise Exception("return")
+                        return False
                     elif self.traffic_light_color == "warning":
-                        self.car.speed = self.car.speed - 5
+                        print("tf warning")
+                        self.car.speed = self.car.speed - 2
                         self.car.run()
-                        raise Exception("return")
+                        return False
                     elif self.traffic_light_color == "go":
-                        self.car.speed = self.min_duty_dc_run 
-                
+                        print("tf go")
+                        if self.car.speed != 0:
+                            self.car.speed = self.duty_dc_run 
+                if object_min is not None:
+                    index_dis_obj = np.where(object_min[3] >= self.array_distance)[0][0]
+                else: 
+                    return True
                 # check object in lane
-                if object_min[0] >= self.arr_x_oriline_left[dis_obj_limit] and object_min[2] <= self.arr_x_oriline_right[dis_obj_limit]:
+                if object_min[0] >= self.arr_x_oriline_left[index_dis_obj] and object_min[2] <= self.arr_x_oriline_right[index_dis_obj]:
                     self.start_turn = time.time()
-                    return
+                    return True
                 else:
-                    dis_obj_left = np.abs(object_min[0] - self.arr_x_oriline_left[dis_obj_limit])
-                    dis_obj_right = np.abs(self.arr_x_oriline_right[dis_obj_limit] - object_min[2])
+                    dis_obj_left = np.abs(object_min[0] - self.arr_x_oriline_left[index_dis_obj])
+                    dis_obj_right = np.abs(self.arr_x_oriline_right[index_dis_obj] - object_min[2])
                     # get max distance
-                    if dis_obj_left > dis_obj_right:
-                        if dis_obj_left >= thre_width * self.array_width_lane[dis_obj_limit]:
-                            # turn left
-                            dis = np.abs(object_min[0] - self.arr_x_oriline_right[dis_obj_limit])
-                            dis = convert_pixel_to_cm(dis, self.array_width_lane[dis_obj_limit], self.width_lane)
-                            self.car.turn_corner(self.center_servo - dis)
-                            # if self.car.is_stop():
-                            #     self.car.forward(self.min_duty_dc_run)
+                    if dis_obj_left < dis_obj_right:
+                        if dis_obj_right >= thre_width * self.array_width_lane[index_dis_obj]:
+                            # turn right
+                            dis = np.abs(object_min[2] - self.arr_x_oriline_left[index_dis_obj])
+                            dis = convert_pixel_to_cm(dis, self.array_width_lane[index_dis_obj], self.width_lane)
+                            self.car.turn_corner(self.center_servo + dis*1.7)
+                            print("turn right")
                         else:
                             # change lane
                             self.start_turn = time.time()
-                            return
-                    elif dis_obj_right >= thre_width * self.array_width_lane[dis_obj_limit]:
+                            return True
+                    elif dis_obj_left >= thre_width * self.array_width_lane[index_dis_obj]:
                         # turn left
-                        dis = np.abs(object_min[2] - self.arr_x_oriline_left[dis_obj_limit])
-                        dis = convert_pixel_to_cm(dis, self.array_width_lane[dis_obj_limit], self.width_lane)
-                        self.car.turn_corner(self.center_servo + dis)
-                        # if self.car.is_stop():
-                        #     self.car.forward(self.min_duty_dc_run)
+                        dis = np.abs(object_min[0] - self.arr_x_oriline_right[index_dis_obj])
+                        dis = convert_pixel_to_cm(dis, self.array_width_lane[index_dis_obj], self.width_lane)
+                        self.car.turn_corner(self.center_servo - dis*1.7)
+                        print("turn left")
                     else:
-                        self.car.stop()
-                        return
-                self.car.run()
+                        print("stop")
+                        self.stop_car()
+                    self.car.run()
+                    return False
 
+        return True
     def control_car_in_lane(self):
         line_left = self.lines[0]
         line_right = self.lines[2]
@@ -259,7 +289,7 @@ class Camera(object):
         # line_left = line_left[line_left[:, 1] >= ARRAY_DISTANCE[index_dis]]
         # line_right = line_right[line_right[:, 1] <= ARRAY_DISTANCE[0]]
         # line_right = line_right[line_right[:, 1] >= ARRAY_DISTANCE[index_dis]]
-        if self.start_turn and time.time() - self.start_turn < self.time_turn_limmit:
+        if self.start_turn and time.time() - self.start_turn <= self.time_turn_limmit:
             # change lane
             if len(line_left_1) > 2:
                 name_linedt = "left_1"
@@ -273,7 +303,7 @@ class Camera(object):
                 arr_x_oriline = self.arr_x_oriline_right
             else:
                 # stop
-                self.car.stop()
+                self.stop_car()
                 return self.frame_recognized
             print("change lane")
         else:
@@ -290,7 +320,7 @@ class Camera(object):
                 arr_x_oriline = self.arr_x_oriline_left
             else:
                 # stop
-                self.car.stop()
+                self.stop_car()
                 return self.frame_recognized
         distance = get_distance_oriline_linedt(self.frame_recognized, self.array_distance, self.array_width_lane, self.width_lane, arr_x_oriline, colordt)
         thresh_dis = 2
@@ -304,13 +334,14 @@ class Camera(object):
         #     cross = np.cross(vector_oriline, vector_linedt)
         #     vector_oriline = np.array([arr_x_oriline[index_dis] - arr_x_oriline[0], ARRAY_DISTANCE[index_dis] - ARRAY_DISTANCE[0]]) * (-1 if cross > 0 else 1)
         angle = get_angle(vector_oriline, vector_linedt)
-        if np.abs(distance) >= thresh_dis:
+        if np.abs(distance) >= 6:
             angle = np.abs(angle) * (1 if distance > 0 else -1)
         
-        angle_dis = (distance) * 0.8 if np.abs(distance) > thresh_dis else 0
-        angle = angle * 0.8 if np.abs(angle) > 2 else 0 
+        angle_dis = (distance) *0.8 if np.abs(distance) > thresh_dis else 0
+        angle = angle *0.8 if np.abs(angle)  > 2 else 0 
         angle = angle #if distance > 0 else -angle
         angle_turn = int(angle + angle_dis)
+        print(distance, angle, angle_turn)
         self.car.turn_corner(self.center_servo + angle_turn)
         self.car.run()
 

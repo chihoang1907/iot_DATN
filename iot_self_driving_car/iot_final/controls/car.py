@@ -16,6 +16,7 @@ class Car:
         self.max_servo = cfg.MAX_SERVO
         self.deg = self.center_servo
         self.min_duty_dc_run = cfg.MIN_DUTY_DC_RUN
+        self.duty_dc_run = cfg.DUTY_DC_RUN
         self.time_sleep_dc_run = cfg.TIME_SLEEP_DC_RUN
         self.servo= None
         self.setup_pin()
@@ -82,9 +83,9 @@ class Car:
         self.servo.angle = self.deg
 
     def run(self):
-        if self.speed != self.min_duty_dc_run:
-            if self.speed != 0:
+        if self.speed != self.duty_dc_run:
+            if self.speed > 0:
                 self.forward(self.speed)
             else:
                 self.forward(self.min_duty_dc_run)
-                self.speed = self.min_duty_dc_run
+                self.speed = self.duty_dc_run

@@ -22,6 +22,7 @@ app.config["SECRET_KEY"] = 'secret!'
 socketio = SocketIO(app)
 car = Car(IN_MOTOR_DRIVER, SERVO_PIN_PCA, cfg)
 camera = Camera(car, cfg)
+camera.status_control = True
 print("Camera is opened: "+ str(camera.is_opened()))
 if not camera.is_opened():
     raise Exception("Camera is not opened!")
@@ -34,7 +35,7 @@ def stream_camera():
     return Response(gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
 def gen():
     while True:
-        frame = camera.get_frame()
+        frame = camera.get_frame_recognized()
         yield (b'--frame\r\n'
             b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 

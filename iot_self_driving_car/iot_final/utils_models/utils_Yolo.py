@@ -102,7 +102,6 @@ def detect_color(traffic_light, color_dict_HSV):
     elif warning_mask > red_mask and warning_mask > go_mask:
         color_mask = warning_mask
         color_name = 'warning'
-
     if color_mask and color_mask >= 100:
         return color_name
     else:
